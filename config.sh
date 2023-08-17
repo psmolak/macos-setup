@@ -1,12 +1,18 @@
 # https://macos-defaults.com/
-
 # https://www.frontendreference.com/disable-adding-period-with-double-space-ventura.html
 
-# enable key repeat when hold
-defaults write -g ApplePressAndHoldEnabled -bool false
-
-# disable font-smoothing [ disabled (0), light (1), medium (2), strong (3) ]
-defaults -currentHost write -g AppleFontSmoothing -int 2
+# Settings
+defaults write com.apple.dock tilesize -int "50"
+defaults write com.apple.dock autohide -bool "true"
+defaults write com.apple.dock autohide-delay -float "0.1"
+defaults write com.apple.dock show-recents -bool "false"
+defaults write com.apple.finder AppleShowAllFiles -bool "true"
+defaults write com.apple.finder ShowPathbar -bool "true"
+defaults write com.apple.finder FXPreferredViewStyle -string "Nlsv"
+defaults write com.apple.finder FXRemoveOldTrashItems -bool "true"
+defaults write com.apple.finder ShowHardDrivesOnDesktop -bool "false"
+defaults write com.apple.ActivityMonitor UpdatePeriod -int "2"
+defaults write NSGlobalDomain ApplePressAndHoldEnabled -bool "false"
 
 if which git
 then
