@@ -1,6 +1,9 @@
 # https://macos-defaults.com/
 # https://www.frontendreference.com/disable-adding-period-with-double-space-ventura.html
 
+# Install CLI tools
+xcode-select --install
+
 # Settings
 defaults write com.apple.dock tilesize -int "50"
 defaults write com.apple.dock autohide -bool "true"
