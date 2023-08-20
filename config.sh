@@ -12,7 +12,7 @@
 #        ░         ░  ░░ ░          ░ ░        ░           ░     ░  ░           ░              
 #                      ░
 #
-# last updated: 18.08.2023
+# last updated: 20.08.2023
 
 
 set -o errexit   # abort on nonzero exitstatus
@@ -166,6 +166,7 @@ install-packages() {
     brew install --cask 'visual-studio-code'
     brew install --cask 'docker'
     brew install --cask 'figma'
+    brew install --cask 'signal'
 }
 
 setup-packages() {
