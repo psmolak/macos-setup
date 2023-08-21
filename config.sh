@@ -175,7 +175,7 @@ setup-packages() {
     then
         install-homebrew
     fi
-    
+
     install-packages
 }
 
@@ -198,26 +198,30 @@ setup-settings() {
 }
 
 setup-dotfiles() {
-    local projects=~/prj
+    read -p "Where do you want to clone your dotfiles? [~/prj]: " path
 
-    if [ ! -d "$projects" ]
+    if [ ! -d "${path:="$HOME/prj"}" ]
     then
-        mkdir -p "$projects"
+        mkdir -p "$path"
     fi
 
-    git clone git@github.com:psmolak/dotfiles.git "${projects}/dotfiles"
-    "${projects}/dotfiles/install.sh"
-}
+    which stow &> /dev/null || brew install stow
 
-# TODO: move this to ~/.gitconfig
-enforce-git-local-identity() {
-    # remove any existing global identity
-    git config --global --unset user.name
-    git config --global --unset user.email
-    git config --global --unset user.signingkey
+    local dotfilespath="${path}/dotfiles"
 
-    # require local config to exist in order to make commits
-    git config --global user.useConfigOnly true
+    if [ ! -d "$dotfilespath" ]
+    then
+        git clone git@github.com:psmolak/dotfiles.git "$dotfilespath"
+    fi
+
+    if [ -z "$1" ]
+    then
+        echo "Please provide a dotfile to setup."
+        ls -1 "$dotfilespath" | sed s/"install.sh"// | sed -r '/^\s*$/d'
+        return 1
+    fi
+
+    stow --dir=$dotfilespath --target="$HOME" -v "$1"
 }
 
 post-setup() {
@@ -231,7 +235,7 @@ main() {
         "ssh")         setup-ssh ;;
         "known-hosts") setup-known-hosts ;;
         "packages")    setup-packages ;;
-        "dotfiles")    setup-dotfiles ;;
+        "dotfiles")    setup-dotfiles "$2" ;;
         "settings")    setup-settings ;;
         "post-setup")  post-setup ;;
 
