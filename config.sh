@@ -169,11 +169,23 @@ install-packages() {
     brew install --cask 'iterm2'
     brew install --cask 'raycast'
     brew install --cask 'google-chrome'
-    brew install --cask 'visual-studio-code'
     brew install --cask 'docker'
     brew install --cask 'figma'
     brew install --cask 'signal'
     brew install --cask 'slack'
+
+    brew install --cask 'visual-studio-code'
+    setup-custom-css-vscode-file-perms
+}
+
+setup-custom-css-vscode-file-perms() {
+    # ttps://github.com/be5invis/vscode-custom-css
+    sudo chown -R $(whoami) $(which code)
+
+    if [ -d "/usr/share/code" ]
+    then
+        sudo chown -R $(whoami) /usr/share/code
+    fi
 }
 
 setup-packages() {
