@@ -12,7 +12,7 @@
 #        ░         ░  ░░ ░          ░ ░        ░           ░     ░  ░           ░              
 #                      ░
 #
-# last updated: 21.08.2023
+# last updated: 22.08.2023
 
 
 set -o errexit   # abort on nonzero exitstatus
@@ -122,6 +122,12 @@ setup-ssh() {
     add-ssh-host-config-entry "${keyname}" "${keypath}" "bitbucket.org"
 
     setup-known-hosts
+
+    if which pbcopy &> /dev/null
+    then
+        pbcopy < "${keypath}/${keyname}.pub"
+        echo "${keypath}/${keyname}.pub" key content copied to clipboard!
+    fi
 }
 
 install-homebrew() {
