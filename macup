@@ -18,6 +18,94 @@ set -o errexit  # abort on nonzero exitstatus
 set -o pipefail # don't hide errors within pipes
 set -o nounset  # abort on unbound variable
 
+ssh-usage() {
+    echo "Usage: ./macup ssh [OPTIONS] SUBCOMMAND"
+    echo
+    echo "OPTIONS"
+    echo "  -h, --help  Display this help message."
+    echo
+    echo "SUBCOMMANDS"
+    echo
+    echo "  setup-default"
+    echo "      Setup default ssh key, add to ssh-agent, add to ssh config for github.com and bitbucket.org."
+    echo
+    echo "  generate [keyname]"
+    echo "      Generate new ssh ed25519 key inside ~/.ssh"
+    echo
+    echo "  add-to-agent [keyname]"
+    echo "      Add ssh key to ssh-agent and store in keychain."
+    echo
+    echo "  add-to-config [keyname] [host]"
+    echo "      Populate config to use key for auth (github.com and bitbucket.org by default)."
+    echo
+    echo "  known-hosts"
+    echo "      Populate ~/.ssh/known_hosts with public keys of github.com and bitbucket.org."
+    echo
+}
+
+ssh-main() {
+    local keyname="${2:-ed25519}"
+    local keypath="$HOME/.ssh"
+
+    case "${1:-}" in
+    "setup-default")
+        setup-default-ssh
+        ;;
+
+    "generate")
+        generate-new-ssh-key "${keyname}" "${keypath}"
+        ;;
+
+    "add-to-agent")
+        add-ssh-key-to-agent "${keyname}" "${keypath}"
+        ;;
+
+    "add-to-config")
+        local host="${3:-'github.com bitbucket.org'}"
+        add-ssh-host-config-entry "${keyname}" "${keypath}" "${host}"
+        ;;
+
+    "known-hosts")
+        setup-known-hosts
+        ;;
+
+    "-h" | "--help")
+        ssh-usage
+        ;;
+
+    "")
+        ssh-usage
+        exit 1
+        ;;
+
+    *)
+        echo "Error: Invalid subcommand: ${1:-}"
+        exit 1
+        ;;
+
+    esac
+}
+
+setup-default-ssh() {
+    local keypath="$HOME/.ssh"
+
+    read -rp "Enter your new SSH keyname (ed25519): " keyname
+    [ -z "$keyname" ] && keyname="ed25519"
+
+    generate-new-ssh-key "${keyname}" "${keypath}"
+    add-ssh-key-to-agent "${keyname}" "${keypath}"
+
+    add-ssh-host-config-entry "${keyname}" "${keypath}" "github.com"
+    add-ssh-host-config-entry "${keyname}" "${keypath}" "bitbucket.org"
+
+    setup-known-hosts
+
+    if which pbcopy &>/dev/null; then
+        pbcopy <"${keypath}/${keyname}.pub"
+        echo "${keypath}/${keyname}.pub" key content copied to clipboard!
+    fi
+}
+
 generate-new-ssh-key() {
     local keyname="${1}"
     local keypath="${2}"
@@ -25,7 +113,7 @@ generate-new-ssh-key() {
     read -rp "Enter a new SSH key comment: " comment
 
     if [ -z "$comment" ]; then
-        echo "Please provide a comment for your new ssh key, i.e email or machine name"
+        echo "Please provide a comment for your new ssh key, i.e 'iMac27 name@example.com'"
         return 1
     fi
 
@@ -105,29 +193,15 @@ setup-known-hosts() {
     fi
 }
 
-setup-ssh() {
-    local keyname="ed25519"
-    local keypath="$HOME/.ssh"
+ensure-homebrew-installed() {
+    which brew &>/dev/null && return 0
 
-    generate-new-ssh-key "${keyname}" "${keypath}"
-    add-ssh-key-to-agent "${keyname}" "${keypath}"
-
-    add-ssh-host-config-entry "${keyname}" "${keypath}" "github.com"
-    add-ssh-host-config-entry "${keyname}" "${keypath}" "bitbucket.org"
-
-    setup-known-hosts
-
-    if which pbcopy &>/dev/null; then
-        pbcopy <"${keypath}/${keyname}.pub"
-        echo "${keypath}/${keyname}.pub" key content copied to clipboard!
-    fi
-}
-
-install-homebrew() {
     /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 
-    # shellcheck disable=SC2016
-    echo '[ -e /opt/homebrew/bin/brew ] && eval "$(/opt/homebrew/bin/brew shellenv)"' >>~/.zprofile
+    if [ "$(basename "$SHELL")" = "zsh" ]; then
+        # shellcheck disable=SC2016
+        echo '[ -e /opt/homebrew/bin/brew ] && eval "$(/opt/homebrew/bin/brew shellenv)"' >>~/.zprofile
+    fi
 }
 
 install-packages() {
@@ -138,6 +212,9 @@ install-packages() {
     brew tap 'homebrew/cask-fonts'
 
     brew update
+
+    # Personal
+    brew install --HEAD psmolak/tap/bin
 
     # Fonts
     brew install 'font-ubuntu'
@@ -185,11 +262,7 @@ setup-custom-css-vscode-file-perms() {
 }
 
 setup-packages() {
-    if [ ! -e "/opt/homebrew/bin/brew" ]; then
-        install-homebrew
-    fi
-
-    install-packages
+    ensure-homebrew-installed && install-packages
 }
 
 setup-settings() {
@@ -241,25 +314,69 @@ post-setup() {
     echo "* add your fresh ssh key to github.com & bitbucket.org"
 }
 
+usage() {
+    echo "Usage: ./macup ssh | packages | dotfiles | settings | post-setup"
+    echo
+    echo "OPTIONS"
+    echo "  -h, --help  Display this help message."
+    echo
+    echo "COMMANDS"
+    echo
+    echo "  ssh"
+    echo "      Setup ssh."
+    echo
+    echo "  packages"
+    echo "      Setup brew and install packages."
+    echo
+    echo "  dotfiles [dotfile]"
+    echo "      Setup dotfiles."
+    echo
+    echo "  settings"
+    echo "      Setup macOS settings."
+    echo
+    echo "  post-setup"
+    echo "      Post setup steps."
+    echo
+}
+
 main() {
     case "${1:-}" in
-    "ssh") setup-ssh ;;
-    "known-hosts") setup-known-hosts ;;
-    "packages") setup-packages ;;
-    "dotfiles") setup-dotfiles "$2" ;;
-    "settings") setup-settings ;;
-    "post-setup") post-setup ;;
+    "ssh")
+        shift
+        ssh-main "$@"
+        ;;
 
-    "all")
-        setup-ssh
-        setup-known-hosts
+    "packages")
         setup-packages
-        setup-dotfiles
+        ;;
+
+    "dotfiles")
+        setup-dotfiles "$2"
+        ;;
+
+    "settings")
         setup-settings
+        ;;
+
+    "post-setup")
         post-setup
         ;;
 
-    *) echo "Usage: ./setup.sh ssh | known-hosts | packages | dotfiles | settings | post-setup" ;;
+    "-h" | "--help")
+        usage
+        ;;
+
+    "")
+        usage
+        exit 1
+        ;;
+
+    *)
+        usage
+        echo "Error: Invalid command: ${1:-}"
+        exit 1
+        ;;
+
     esac
 }
 
