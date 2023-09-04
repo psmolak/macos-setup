@@ -242,7 +242,7 @@ post-setup() {
 }
 
 main() {
-    case "$1" in
+    case "${1:-}" in
     "ssh") setup-ssh ;;
     "known-hosts") setup-known-hosts ;;
     "packages") setup-packages ;;
